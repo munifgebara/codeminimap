@@ -1,0 +1,64 @@
+/dataset/
+
+
+# Pasta de configurações do PyCharm
+.idea/
+
+# Arquivos de logs
+*.log
+
+# Diretórios de ambientes virtuais
+venv/
+ENV/
+env/
+.venv/
+
+# Arquivos de dependências
+*.py[cod]
+__pycache__/
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+wheels/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Arquivos de teste e cobertura de testes
+htmlcov/
+.tox/
+.nox/
+coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Configurações do Jupyter Notebook
+.ipynb_checkpoints
+
+# Arquivos gerados por IDEs e editores de texto
+*.swp
+*.swo
+*~
+*.sublime-workspace
+
+# Arquivos do PyCharm relacionados a depuração e execução
+.idea/*
+*.iml
+out/
+
+# Arquivos de Docker e outros ambientes de contêiner
+docker-compose.override.yml
+docker-compose.override.yaml
+
+# Outros
+*.DS_Store
+Thumbs.db
+
