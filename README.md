@@ -1,10 +1,10 @@
-# Exemplo de uso do LBP com diferentes classificadores
+# Example of using LBP with different classifiers
 
-Exemplo classificação de imagens de gatos e cachorros utilizando padrões binários locais (LBP) para extração de características e diferentes classificadores, incluindo SVM, Random Forest e KNeighbors, usando o GridSearchCV para encontrar os melhores hiperparâmetros para cada classificador.
+Example image classification using local binary patterns (LBP) for feature extraction and different classifiers, including SVM, Random Forest, and KNeighbors, using GridSearchCV to find the best hyperparameters for each classifier.
 
-## Requisitos
+## Requirements
 
-Os seguintes pacotes são necessários
+The following packages are required
 
 - `numpy`
 - `opencv-python`
@@ -12,3 +12,11 @@ Os seguintes pacotes são necessários
 - `scikit-learn`
 - `matplotlib`
 - `seaborn`
+
+
+The dataset must be a folder with a subfolder for each class containing images
+
+
+To create a dataset from the source code of a project, you use the minimaps.py
+
+
