@@ -27,10 +27,11 @@ class LocalBinaryPatterns:
         return hist
 
 
+# classSizes = [1500,1000, 500, 200]
 
+# classSizes = [1500,1000, 500, 200]
 
-classSizes = [1500,1000, 500, 200]
-
+classSizes = [500]
 
 for classSize in classSizes:
 
@@ -117,7 +118,7 @@ for classSize in classSizes:
         y_pred = clf.predict(X_test)
         print(classification_report(y_test, y_pred))
         print(confusion_matrix(y_test, y_pred))
-        arquivoResultados= f'{name}_{baseFolder.replace("/", "_")}{classSize}.txt'
+        arquivoResultados = f'{name}_{baseFolder.replace("/", "_")}{classSize}.txt'
 
         file = open(arquivoResultados, "w")
         file.write(f"Results for {name} for dataset {baseFolder} {classSize}:\n")
@@ -127,7 +128,6 @@ for classSize in classSizes:
 
         file.write('\n\nconfusion_matrix\n')
 
-
         file.write(str(confusion_matrix(y_test, y_pred)))
 
         file.write('\n\nLabels\n')
@@ -136,12 +136,9 @@ for classSize in classSizes:
             file.write(f'Label {t}  -> {textLabel}\n')
             t += 1
 
-
-
+        file.write('\n\n\n\n\n')
 
         file.close()
-
-
 
         # Matriz de confusão
         cm = confusion_matrix(y_test, y_pred)
