@@ -3,29 +3,30 @@ import os
 import hashlib
 import chardet
 
-caminho_base = 'D:/doutorado/nexus'
-# caminho_base = 'C:\\Users\\Nufinha\\work\\seeu\\src'
-caminho_saida = 'D:/doutorado/lbp_example-main/nexus_encrypted/'
+# caminho_base = 'D:/doutorado/nexus'
+caminho_base = 'C:/Users/Nufinha/work/seeu/web'
+caminho_saida = 'D:/doutorado/lbp_example-main/dataset/javaprojetct02_encrypted/'
 
 
 def encrypt_chars(asc_code):
-    if asc_code<33:        #não-imprimíveis
+    if asc_code < 33:  # não-imprimíveis
         return 32
-    if asc_code<48:         #símbolos
+    if asc_code < 48:  # símbolos
         return asc_code
-    if asc_code<58:         #números
+    if asc_code < 58:  # números
         return 53
-    if asc_code < 65:       #símbolos
+    if asc_code < 65:  # símbolos
         return asc_code
-    if asc_code < 91:       #maiúsculas
+    if asc_code < 91:  # maiúsculas
         return 77
-    if asc_code < 97:       #símbolos
+    if asc_code < 97:  # símbolos
         return asc_code
-    if asc_code < 123:      #minúsculas
+    if asc_code < 123:  # minúsculas
         return 109
-    if asc_code < 127:       #símbolos
+    if asc_code < 127:  # símbolos
         return asc_code
     return 130
+
 
 def create_16_digit_hash(input_string):
     input_bytes = input_string.encode('ISO-8859-1')
@@ -37,6 +38,7 @@ def create_16_digit_hash(input_string):
 
 
 def list_files_recursive(path='.'):
+    print (path)
     for entry in os.listdir(path):
         full_path = os.path.join(path, entry)
         if os.path.isdir(full_path):
@@ -59,16 +61,16 @@ def geraImagem(caminho_arquivo):
         elif caminho_arquivo.endswith("Test.java"):
             tipo = 'javaunittest'
         elif caminho_arquivo.endswith(".xhtml"):
-            tipo = 'jsf'
+            tipo = 'javajsf'
         elif caminho_arquivo.endswith("DTO.java"):
             tipo = 'javadto'
         elif caminho_arquivo.endswith("TO.java"):
             tipo = 'javato'
         elif caminho_arquivo.endswith(".jrxml"):
-            tipo = "jasper"
+            tipo = "javajasper"
         elif caminho_arquivo.endswith("Builder.java"):
             tipo = "javabuilder"
-        elif caminho_arquivo.endswith("Impl.java"):   # vai dar problema....
+        elif caminho_arquivo.endswith("Impl.java"):  # vai dar problema....
             tipo = "javaimplementation"
         elif caminho_arquivo.endswith(".sh"):
             tipo = "sh"
@@ -92,7 +94,12 @@ def geraImagem(caminho_arquivo):
             tipo = "css"
         elif caminho_arquivo.endswith("Converter.java"):
             tipo = "javaconverter"
-
+        elif caminho_arquivo.endswith(".jsp"):
+            tipo = "javajsp"
+        elif caminho_arquivo.endswith(".htm"):
+            tipo = "html"
+        elif caminho_arquivo.endswith(".html"):
+            tipo = "html"
 
         with open(caminho_arquivo, 'rb') as file:
             raw_data = file.read()
@@ -101,23 +108,23 @@ def geraImagem(caminho_arquivo):
 
         with open(caminho_arquivo, 'r', encoding=encoding) as arquivo:
             for linha in arquivo:
-                if '@Entity' in linha:
-                    tipo = 'entity'
-                elif '@Repository' in linha:
-                    tipo = 'repository'
-                elif '@Service' in linha:
-                    tipo = 'service'
-                elif '@Controller' in linha:
-                    tipo = 'controller'
-                elif '@RestController' in linha:
-                    tipo = 'restcontroller'
-                elif '@RestController' in linha:
-                    tipo = 'restcontroller'
-                elif '@Interface' in linha:
-                    tipo = 'annotation'
-                elif 'Interface' in linha:
-                    tipo = 'interface'
-
+                if caminho_arquivo.endswith(".java"):
+                    if '@Entity' in linha:
+                        tipo = 'javaentity'
+                    elif '@Repository' in linha:
+                        tipo = 'javarepository'
+                    elif '@Service' in linha:
+                        tipo = 'javaservice'
+                    elif '@Controller' in linha:
+                        tipo = 'javacontroller'
+                    elif '@RestController' in linha:
+                        tipo = 'javarestcontroller'
+                    elif '@RestController' in linha:
+                        tipo = 'javarestcontroller'
+                    elif '@Interface' in linha:
+                        tipo = 'javaannotation'
+                    elif 'Interface' in linha:
+                        tipo = 'javainterface'
 
                 contador_linhas += 1  # Conta as linhas
                 linha_mais_larga = max(linha_mais_larga, len(linha.strip()))
@@ -128,7 +135,6 @@ def geraImagem(caminho_arquivo):
         largura, altura = linha_mais_larga, contador_linhas
         imagem = Image.new('RGB', (largura, altura), 'black')
         y = 0
-
 
         with open(caminho_arquivo, 'r', encoding=encoding) as arquivo:
             for linha in arquivo:
