@@ -3,9 +3,9 @@ import os
 import hashlib
 import chardet
 
-# caminho_base = 'D:/doutorado/nexus'
-caminho_base = 'C:/Users/Nufinha/work/seeu/web'
-caminho_saida = 'D:/doutorado/lbp_example-main/dataset/javaprojetct02_encrypted/'
+
+caminho_base =  'D:/doutorado/projetoexemplo'
+caminho_saida = 'D:/doutorado/lbp_example-main/dataset/javaprojetct03_encrypted/'
 
 
 def encrypt_chars(asc_code):

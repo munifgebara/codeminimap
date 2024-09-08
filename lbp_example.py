@@ -29,9 +29,7 @@ class LocalBinaryPatterns:
 
 # classSizes = [1500,1000, 500, 200]
 
-# classSizes = [1500,1000, 500, 200]
-
-classSizes = [500]
+classSizes = [1500, 1000, 500, 200]
 
 for classSize in classSizes:
 
@@ -42,7 +40,7 @@ for classSize in classSizes:
     labels = []
     textLabels = []
 
-    baseFolder = 'dataset/all/'
+    baseFolder = 'dataset/javaprojetct03_encrypted/'
 
     folders = os.listdir(baseFolder)
     l = 0
@@ -65,87 +63,87 @@ for classSize in classSizes:
                 break
         l += 1
 
+t = 0
+for textLabel in textLabels:
+    print(t, textLabel)
+    t += 1
+
+# Extração das características LBP
+data = []
+for image in images:
+    hist = feature_extractor.describe(image)
+    data.append(hist)
+
+data = np.array(data)
+labels = np.array(labels)
+
+# Divisão do dataset
+X_train, X_test, y_train, y_test = train_test_split(data, labels, test_size=0.2, random_state=180875)
+
+# SVM com GridSearchCV
+param_grid_svm = {'C': [1000, 2000, 10000], 'gamma': [2, 1, 0.1, 0.01, 0.001, 0.0001], 'kernel': ['rbf']}
+grid_svm = GridSearchCV(SVC(), param_grid_svm, refit=True, verbose=3)
+grid_svm.fit(X_train, y_train)
+
+print("Best parameters for SVM: ", grid_svm.best_params_)
+print("Best estimator for SVM: ", grid_svm.best_estimator_)
+
+# RandomForest com GridSearchCV
+param_grid_rf = {'n_estimators': [10, 50, 100, 200], 'max_depth': [None, 10, 20, 30]}
+grid_rf = GridSearchCV(RandomForestClassifier(), param_grid_rf, refit=True, verbose=3)
+grid_rf.fit(X_train, y_train)
+
+print("Best parameters for RandomForest: ", grid_rf.best_params_)
+print("Best estimator for RandomForest: ", grid_rf.best_estimator_)
+
+# KNeighbors com GridSearchCV
+param_grid_knn = {'n_neighbors': [3, 5, 7, 9, 11, 13, 15, 17, 19], 'weights': ['uniform', 'distance']}
+grid_knn = GridSearchCV(KNeighborsClassifier(), param_grid_knn, refit=True, verbose=3)
+grid_knn.fit(X_train, y_train)
+
+print("Best parameters for KNeighbors: ", grid_knn.best_params_)
+print("Best estimator for KNeighbors: ", grid_knn.best_estimator_)
+
+# Predição e avaliação com o melhor modelo de cada classificador
+classifiers = {
+    'SVM': grid_svm,
+    'RandomForest': grid_rf,
+    'KNeighbors': grid_knn
+}
+
+for name, clf in classifiers.items():
+    print(f"Results for {name} for dataset {baseFolder}:")
+    y_pred = clf.predict(X_test)
+    print(classification_report(y_test, y_pred))
+    print(confusion_matrix(y_test, y_pred))
+    arquivoResultados = f'{name}_{baseFolder.replace("/", "_")}{classSize}.txt'
+
+    file = open(arquivoResultados, "w")
+    file.write(f"Results for {name} for dataset {baseFolder} {classSize}:\n")
+    file.write(classification_report(y_test, y_pred))
+
     t = 0
+
+    file.write('\n\nconfusion_matrix\n')
+
+    file.write(str(confusion_matrix(y_test, y_pred)))
+
+    file.write('\n\nLabels\n')
+
     for textLabel in textLabels:
-        print(t, textLabel)
+        file.write(f'Label {t}  -> {textLabel}\n')
         t += 1
 
-    # Extração das características LBP
-    data = []
-    for image in images:
-        hist = feature_extractor.describe(image)
-        data.append(hist)
+    file.write('\n\n\n\n\n')
 
-    data = np.array(data)
-    labels = np.array(labels)
+    file.close()
 
-    # Divisão do dataset
-    X_train, X_test, y_train, y_test = train_test_split(data, labels, test_size=0.2, random_state=180875)
-
-    # SVM com GridSearchCV
-    param_grid_svm = {'C': [1000, 2000, 10000], 'gamma': [2, 1, 0.1, 0.01, 0.001, 0.0001], 'kernel': ['rbf']}
-    grid_svm = GridSearchCV(SVC(), param_grid_svm, refit=True, verbose=3)
-    grid_svm.fit(X_train, y_train)
-
-    print("Best parameters for SVM: ", grid_svm.best_params_)
-    print("Best estimator for SVM: ", grid_svm.best_estimator_)
-
-    # RandomForest com GridSearchCV
-    param_grid_rf = {'n_estimators': [10, 50, 100, 200], 'max_depth': [None, 10, 20, 30]}
-    grid_rf = GridSearchCV(RandomForestClassifier(), param_grid_rf, refit=True, verbose=3)
-    grid_rf.fit(X_train, y_train)
-
-    print("Best parameters for RandomForest: ", grid_rf.best_params_)
-    print("Best estimator for RandomForest: ", grid_rf.best_estimator_)
-
-    # KNeighbors com GridSearchCV
-    param_grid_knn = {'n_neighbors': [3, 5, 7, 9, 11, 13, 15, 17, 19], 'weights': ['uniform', 'distance']}
-    grid_knn = GridSearchCV(KNeighborsClassifier(), param_grid_knn, refit=True, verbose=3)
-    grid_knn.fit(X_train, y_train)
-
-    print("Best parameters for KNeighbors: ", grid_knn.best_params_)
-    print("Best estimator for KNeighbors: ", grid_knn.best_estimator_)
-
-    # Predição e avaliação com o melhor modelo de cada classificador
-    classifiers = {
-        'SVM': grid_svm,
-        'RandomForest': grid_rf,
-        'KNeighbors': grid_knn
-    }
-
-    for name, clf in classifiers.items():
-        print(f"Results for {name} for dataset {baseFolder}:")
-        y_pred = clf.predict(X_test)
-        print(classification_report(y_test, y_pred))
-        print(confusion_matrix(y_test, y_pred))
-        arquivoResultados = f'{name}_{baseFolder.replace("/", "_")}{classSize}.txt'
-
-        file = open(arquivoResultados, "w")
-        file.write(f"Results for {name} for dataset {baseFolder} {classSize}:\n")
-        file.write(classification_report(y_test, y_pred))
-
-        t = 0
-
-        file.write('\n\nconfusion_matrix\n')
-
-        file.write(str(confusion_matrix(y_test, y_pred)))
-
-        file.write('\n\nLabels\n')
-
-        for textLabel in textLabels:
-            file.write(f'Label {t}  -> {textLabel}\n')
-            t += 1
-
-        file.write('\n\n\n\n\n')
-
-        file.close()
-
-        # Matriz de confusão
-        cm = confusion_matrix(y_test, y_pred)
-        plt.figure(figsize=(10, 8))
-        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
-        plt.title(f'Confusion Matrix for {name} {baseFolder} classSize: {classSize}')
-        plt.ylabel('True label')
-        plt.xlabel('Predicted label')
-        plt.savefig(f'confusion_matrix_{name}_{baseFolder.replace("/", "_")}{classSize}.png')
-        plt.close()
+    # Matriz de confusão
+    cm = confusion_matrix(y_test, y_pred)
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
+    plt.title(f'Confusion Matrix for {name} {baseFolder} classSize: {classSize}')
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+    plt.savefig(f'confusion_matrix_{name}_{baseFolder.replace("/", "_")}{classSize}.png')
+    plt.close()
