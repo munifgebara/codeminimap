@@ -1,0 +1,44 @@
+Results for SVM for dataset dataset/all/ 750:
+              precision    recall  f1-score   support
+
+           0       0.92      0.96      0.94       160
+           1       0.79      0.75      0.77       142
+           2       0.77      0.86      0.82       148
+           3       0.79      0.81      0.80       171
+           4       0.90      0.82      0.86       138
+           5       0.97      0.89      0.93       160
+           6       0.89      0.86      0.87       138
+           7       0.97      0.98      0.97       145
+           8       0.92      0.97      0.94       148
+
+    accuracy                           0.88      1350
+   macro avg       0.88      0.88      0.88      1350
+weighted avg       0.88      0.88      0.88      1350
+
+
+confusion_matrix
+[[154   2   0   1   2   0   1   0   0]
+ [  4 106  22   7   1   0   1   1   0]
+ [  0   9 128   6   4   0   0   0   1]
+ [  6   7   6 139   5   0   2   0   6]
+ [  2   2   8   8 113   1   4   0   0]
+ [  0   3   2   3   0 143   4   2   3]
+ [  1   4   0   9   1   0 118   2   3]
+ [  0   0   0   0   0   2   1 142   0]
+ [  0   1   0   2   0   1   1   0 143]]
+
+Labels
+Label 0  -> javaconverter
+Label 1  -> javadto
+Label 2  -> javaentity
+Label 3  -> javaimplementation
+Label 4  -> javaunittest
+Label 5  -> js
+Label 6  -> sql
+Label 7  -> svg
+Label 8  -> javajsp
+
+
+
+
+
