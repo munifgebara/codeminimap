@@ -70,7 +70,7 @@ def geraImagem(caminho_arquivo):
             tipo = "javajasper"
         elif caminho_arquivo.endswith("Builder.java"):
             tipo = "javabuilder"
-        elif caminho_arquivo.endswith("Impl.java"):  # vai dar problema....
+        elif caminho_arquivo.endswith("Impl.java"):
             tipo = "javaimplementation"
         elif caminho_arquivo.endswith(".sh"):
             tipo = "sh"
