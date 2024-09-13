@@ -102,7 +102,7 @@ for classSize in classSizes:
     print("Best estimator for SVM: ", grid_svm.best_estimator_)
 
     # RandomForest com GridSearchCV
-    param_grid_rf = {'n_estimators': [10, 50, 100, 200], 'max_depth': [None, 10, 20, 30]}
+    param_grid_rf = {'n_estimators': [10, 50, 100, 200, 500, 1000], 'max_depth': [None, 10, 20, 30, 100]}
     grid_rf = GridSearchCV(RandomForestClassifier(), param_grid_rf, refit=True, verbose=3)
     grid_rf.fit(X_train, y_train)
 

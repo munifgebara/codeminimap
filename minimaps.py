@@ -4,8 +4,18 @@ import hashlib
 import chardet
 
 
-caminho_base =  'D:/doutorado/projetoexemplo'
-caminho_saida = 'D:/doutorado/lbp_example-main/dataset/javaprojetct03_encrypted/'
+caminho_base =  '../projetos/nexus'
+caminho_saida = 'dataset/javaprojetct_jsf'
+encrypt_flag=True
+
+if encrypt_flag:
+    caminho_saida = caminho_saida+'_encrypted'
+
+
+fixed_size=True
+if fixed_size:
+    caminho_saida = caminho_saida+'_fixed_size'
+
 
 
 def encrypt_chars(asc_code):
@@ -51,6 +61,15 @@ def geraImagem(caminho_arquivo):
     try:
         contador_linhas = 0
         linha_mais_larga = 0
+
+
+        if caminho_arquivo.endswith(".zip"):
+            return
+        if caminho_arquivo.endswith(".png"):
+            return
+        if caminho_arquivo.endswith(".jpg"):
+            return
+
 
         tipo = 'other'
 
@@ -132,22 +151,31 @@ def geraImagem(caminho_arquivo):
         if tipo == 'other':
             return
 
-        largura, altura = linha_mais_larga, contador_linhas
+        if fixed_size:
+            largura, altura = 128, 128
+        else:
+            largura, altura = linha_mais_larga+2*8, contador_linhas+2*8
+
+        border = 8
         imagem = Image.new('RGB', (largura, altura), 'black')
         y = 0
 
         with open(caminho_arquivo, 'r', encoding=encoding) as arquivo:
             for linha in arquivo:
                 for x in range(len(linha.strip())):
+                    if (x + 2 * border) >= largura:
+                        break
                     v = ord(linha[x])
                     v = encrypt_chars(v)
                     if v > 255:
                         v = 255
                     try:
-                        imagem.putpixel((x, y), (v, v, v))
+                        imagem.putpixel((x + border, y + border), (v, v, v))
                     except IndexError:
                         print(largura, altura, x, y, v)
                 y += 1
+                if (y + 2 * border) >= altura:
+                    break
 
         caminho_saida_com_tipo = caminho_saida + '/' + tipo + '/'
         os.makedirs(caminho_saida_com_tipo, exist_ok=True)
