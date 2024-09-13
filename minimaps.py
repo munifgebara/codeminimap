@@ -4,15 +4,15 @@ import hashlib
 import chardet
 
 
-caminho_base =  '../projetos/nexus'
-caminho_saida = 'dataset/javaprojetct_jsf'
+caminho_base =  'project'
+caminho_saida = 'dataset/javaprojetct_jsp'
 encrypt_flag=True
 
 if encrypt_flag:
     caminho_saida = caminho_saida+'_encrypted'
 
 
-fixed_size=True
+fixed_size=False
 if fixed_size:
     caminho_saida = caminho_saida+'_fixed_size'
 
@@ -68,6 +68,8 @@ def geraImagem(caminho_arquivo):
         if caminho_arquivo.endswith(".png"):
             return
         if caminho_arquivo.endswith(".jpg"):
+            return
+        if '.git' in caminho_arquivo:
             return
 
 
