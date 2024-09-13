@@ -39,7 +39,7 @@ for classSize in classSizes:
     textLabels = []
     filenames = []
 
-    baseFolder = 'dataset/all_encrypted_fixed/'
+    baseFolder = 'dataset/all_encrypted_fixed_size/'
 
     folders = os.listdir(baseFolder)
     l = 0
