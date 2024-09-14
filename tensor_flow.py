@@ -1,3 +1,5 @@
+import math
+
 import matplotlib.pyplot as plt
 import numpy as np
 import PIL
@@ -40,7 +42,7 @@ train_ds = tf.keras.utils.image_dataset_from_directory(
   data_dir,
   validation_split=0.2,
   subset="training",
-  seed=123,
+  seed=180875,
   image_size=(img_height, img_width),
   batch_size=batch_size)
 
@@ -95,11 +97,11 @@ num_classes = len(class_names)
 
 model = Sequential([
   layers.Rescaling(1./255, input_shape=(img_height, img_width, 3)),
-  layers.Conv2D(16, 3, padding='same', activation='relu'),
-  layers.MaxPooling2D(),
   layers.Conv2D(32, 3, padding='same', activation='relu'),
   layers.MaxPooling2D(),
   layers.Conv2D(64, 3, padding='same', activation='relu'),
+  layers.MaxPooling2D(),
+  layers.Conv2D(128, 3, padding='same', activation='relu'),
   layers.MaxPooling2D(),
   layers.Dropout(0.2),
   layers.Flatten(),
@@ -116,12 +118,21 @@ model.compile(optimizer='adam',
 model.summary()
 
 
+def scheduler(epoch, lr):
+  if epoch < 5:
+    return lr
+  else:
+    return lr * np.exp(-0.1)
 
-epochs=15
+
+callback = tf.keras.callbacks.LearningRateScheduler(scheduler)
+
+epochs=20
 history = model.fit(
   train_ds,
   validation_data=val_ds,
-  epochs=epochs
+  epochs=epochs,
+  callbacks=[callback]
 )
 
 
