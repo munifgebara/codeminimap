@@ -1,21 +1,29 @@
 import math
+import os
+import shutil
 
+import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import PIL
 import tensorflow as tf
 
 import seaborn as sns
+from netaddr.strategy.ipv6 import width
 
 from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras.models import Sequential
+from tensorflow.keras.preprocessing import image
+from tensorflow.keras.applications.mobilenet_v2 import preprocess_input, decode_predictions
+
 
 import pathlib
 
 import matplotlib.pyplot as plt
 
 from sklearn.metrics import ConfusionMatrixDisplay
+from yaml import full_load
 
 
 def plot_confusion_matrix(conf_matrix, class_names):
@@ -29,8 +37,8 @@ def plot_confusion_matrix(conf_matrix, class_names):
 
 
 data_dir = pathlib.Path('/media/munif-gebara-junior/Novo volume/doutorado/lbp_example-main/dataset/five').with_suffix('')
-
-image_count = len(list(data_dir.glob('*/*.png')))
+data_dir = pathlib.Path('/media/munif-gebara-junior/munif/model').with_suffix('')
+image_count = len(list(data_dir.glob('*/*.*')))
 print(image_count)
 
 
@@ -63,8 +71,8 @@ print(class_names)
 
 plt.figure(figsize=(10, 10))
 for images, labels in train_ds.take(1):
-  for i in range(9):
-    ax = plt.subplot(3, 3, i + 1)
+  for i in range(25):
+    ax = plt.subplot(5, 5, i + 1)
     plt.imshow(images[i].numpy().astype("uint8"))
     plt.title(class_names[labels[i]])
     plt.axis("off")
@@ -127,7 +135,7 @@ def scheduler(epoch, lr):
 
 callback = tf.keras.callbacks.LearningRateScheduler(scheduler)
 
-epochs=20
+epochs=40
 history = model.fit(
   train_ds,
   validation_data=val_ds,
@@ -183,6 +191,7 @@ for images, labels in val_ds:
     y_true.extend(labels.numpy())
     predictions = classifier.predict(images.numpy())
     y_pred.extend(predictions)
+    print (predictions)
 
 # Convert to numpy arrays for confusion matrix
 y_true = np.array(y_true)
@@ -193,3 +202,51 @@ conf_matrix = tf.math.confusion_matrix(y_true, y_pred, num_classes=num_classes)
 
 # Plot the confusion matrix
 plot_confusion_matrix(conf_matrix, class_names)
+
+
+destination='/media/munif-gebara-junior/munif/model_pre/'
+
+def moveImagem(full_path):
+  try:
+    img = cv2.imread(full_path, cv2.IMREAD_COLOR)
+    img = cv2.resize(img, (img_width, img_height))
+
+    img_array = image.img_to_array(img)
+    img_array = np.expand_dims(img_array, axis=0)  # Create a batch
+    img_array = preprocess_input(img_array)  # Preprocess the image
+    pred = model.predict(img_array)
+    predicted_class_index = np.argmax(pred[0])
+    predicted_class_label =  class_names[predicted_class_index]
+    move_file(full_path, predicted_class_label)
+
+
+  except Exception as ex:
+    print('ignorando', full_path, ex)
+    move_file(full_path, 'errors')
+
+
+def move_file(source_file, destination_folder):
+  try:
+    if not os.path.exists(destination + destination_folder):
+      os.makedirs(destination + destination_folder)
+    destination_file = os.path.join(destination + destination_folder, os.path.basename(source_file))
+    shutil.move(source_file, destination_file)
+  except Exception as ex:
+    print('Imposible move file ', source_file, ex)
+
+
+def list_files_recursive(path='.'):
+  print(path)
+  for entry in os.listdir(path):
+    full_path = os.path.join(path, entry)
+    if os.path.isdir(full_path):
+      list_files_recursive(full_path)
+    else:
+      moveImagem(full_path)
+
+novos='/home/munif-gebara-junior/.tx/nnn/fotos/bb'
+list_files_recursive(novos)
+
+
+novos_dir = pathlib.Path(novos).with_suffix('')
+
