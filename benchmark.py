@@ -10,6 +10,7 @@ import contr_dissimilarity
 from PIL import Image
 
 
+
 def converter_grayscale_para_rgb(imagem):
     # Carregar a imagem
     img = Image.open(imagem)
