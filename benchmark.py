@@ -7,14 +7,29 @@ from matplotlib import pyplot as plt
 
 import contr_dissimilarity
 
-from itertools import islice
+from PIL import Image
 
-dataSetPath = "/media/munif-gebara-junior/Novo volume/doutorado/lbp_example-main/dataset/all_encrypted_fixed_size"
 
+def converter_grayscale_para_rgb(imagem):
+    # Carregar a imagem
+    img = Image.open(imagem)
+
+    # Se a imagem for em escala de cinza (modo 'L'), converta para RGB
+    if img.mode == 'L':
+        img_rgb = img.convert('RGB')
+    else:
+        img_rgb = img
+
+    return img_rgb
+
+# dataSetPath = "/media/munif-gebara-junior/Novo volume/doutorado/lbp_example-main/dataset/all_encrypted_fixed_size"
+dataSetPath = "/home/munif-gebara-junior/Downloads/completo4classes"
 # Read the images
 X = []
 Y = []
 min_samples_per_class=500
+
+strings_unicas = set()
 
 for clazz in os.listdir(dataSetPath):
   image_files = list(filter(lambda file: file.lower().endswith((".png", ".jpg", ".jpeg")), os.listdir(f"{dataSetPath}/{clazz}")))
@@ -24,12 +39,17 @@ for clazz in os.listdir(dataSetPath):
 
 
   for img_filename in os.listdir(f"{dataSetPath}/{clazz}"):
-    img = skimage.io.imread(f"{dataSetPath}/{clazz}/{img_filename}")
+    complete_filename=f"{dataSetPath}/{clazz}/{img_filename}"
+    # img = skimage.io.imread(complete_filename)
+    img_rgb = converter_grayscale_para_rgb(complete_filename)
+    img = img_rgb
+
     if img is not None:
         X.append(img)
         Y.append(clazz)
 
 
+print(strings_unicas)
 
 # Convert to numpy
 X = np.array(X, dtype = np.uint8)
@@ -51,7 +71,7 @@ for i in range(30):
   plt.axis("off")
 
 model = contr_dissimilarity.train(X_train, Y_train, save_location = "cache/model.pth",
-                                  warmup_iterations = 5000, iterations = 5000,
+                                  warmup_iterations = 2000, iterations = 2000,
                                   embeddingsize = 128, temperature = 0.5, batch_size = 32,
                                   patch_size = None, projection_head = [128, 64, 32], lr_warmup = 0.01, lr = 0.001)
 
