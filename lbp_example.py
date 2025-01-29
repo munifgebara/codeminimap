@@ -39,7 +39,8 @@ for classSize in classSizes:
     textLabels = []
     filenames = []
 
-    baseFolder = 'dataset/all_encrypted_fixed_size/'
+    # baseFolder = 'dataset/all_encrypted_fixed_size/'
+    baseFolder = "/home/munif-gebara-junior/Downloads/completo4classes/"
 
     folders = os.listdir(baseFolder)
     l = 0

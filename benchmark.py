@@ -9,6 +9,7 @@ import contr_dissimilarity
 
 from PIL import Image
 
+from collections import Counter
 
 
 def converter_grayscale_para_rgb(imagem):
@@ -32,12 +33,12 @@ min_samples_per_class=500
 
 strings_unicas = set()
 
-for clazz in os.listdir(dataSetPath):
+# for clazz in os.listdir(dataSetPath):
+for clazz in ["pneumonia","covid19"]:
   image_files = list(filter(lambda file: file.lower().endswith((".png", ".jpg", ".jpeg")), os.listdir(f"{dataSetPath}/{clazz}")))
   if len(image_files) <min_samples_per_class:
       continue
   print(f"{clazz}: {len(image_files)}")
-
 
   for img_filename in os.listdir(f"{dataSetPath}/{clazz}"):
     complete_filename=f"{dataSetPath}/{clazz}/{img_filename}"
@@ -49,12 +50,21 @@ for clazz in os.listdir(dataSetPath):
         X.append(img)
         Y.append(clazz)
 
-
 print(strings_unicas)
+
+
+contagem = Counter(Y)
+print ("Classes")
+# Exibir os resultados
+for item, qtd in contagem.items():
+    print(f"{item} aparece {qtd} vez(es).")
+
 
 # Convert to numpy
 X = np.array(X, dtype = np.uint8)
 Y = sklearn.preprocessing.LabelEncoder().fit_transform(Y)
+
+
 
 # Subset the problem to only 10 classes
 X = X[Y < 10]
