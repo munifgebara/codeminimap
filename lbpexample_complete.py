@@ -284,7 +284,7 @@ def plotar_matrizes_confusao(matrizes_confusao, class_labels, output_path):
 output_folder = "results"
 os.makedirs(output_folder, exist_ok=True)
 
-classSizes = [20]
+classSizes = [500]
 all_matriz = []
 name_matriz = []
 
@@ -305,7 +305,7 @@ for classSize in classSizes:
         textLabels = []
         filenames = []
 
-        baseFolder = "/home/munif-gebara-junior/Downloads/completo4classes/"
+        baseFolder = "/home/munif/PycharmProjects/codeminimap/datasets/all_encrypted_fixed_size/"
 
         folders = os.listdir(baseFolder)
         l = 0
@@ -313,9 +313,9 @@ for classSize in classSizes:
             print('Loading folder ', folder)
             c = 0
 
-            # if len(os.listdir(baseFolder + folder)) < classSize:
-            # print("não usando ", folder, " por ter somente ", len(os.listdir(baseFolder + folder)), "amostras")
-            # continue
+            if len(os.listdir(baseFolder + folder)) < classSize:
+                print("não usando ", folder, " por ter somente ", len(os.listdir(baseFolder + folder)), "amostras")
+                continue
 
             textLabels.append(folder)
 

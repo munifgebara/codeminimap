@@ -40,7 +40,7 @@ for classSize in classSizes:
     filenames = []
 
     # baseFolder = 'dataset/all_encrypted_fixed_size/'
-    baseFolder = "/home/munif-gebara-junior/Downloads/completo4classes/"
+    baseFolder = "/home/munif/PycharmProjects/codeminimap/datasets/all_encrypted_fixed_size/"
 
     folders = os.listdir(baseFolder)
     l = 0
