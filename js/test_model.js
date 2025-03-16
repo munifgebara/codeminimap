@@ -3,8 +3,9 @@ import fs from 'fs';
 import path from 'path';
 
 // Caminho do modelo e da imagem
-const MODEL_PATH = '../modelos_js/model.json';
-const IMAGE_DIR = '/home/munif-gebara-junior/ml/learn/codeminimap/dataset/novo_encrypted/html';
+const MODEL_PATH = 'modelos_js/model.json';
+const CLASS='other';
+const IMAGE_DIR = '/home/munif-gebara-junior/ml/learn/codeminimap/dataset/novo_encrypted/'+CLASS;
 
 
 async function carregarModelo() {
@@ -33,10 +34,10 @@ async function preverImagem(model, imagePath) {
         // Carregar e processar a imagem
         const imageBuffer = fs.readFileSync(imagePath);
         let imageTensor = tf.node.decodeImage(imageBuffer)
-                              .resizeNearestNeighbor([128, 128])  // Ajuste para o tamanho do modelo
-                              .expandDims(0)
-                              .toFloat()
-                              .div(tf.scalar(255));  // Normaliza entre 0 e 1
+            .resizeNearestNeighbor([128, 128])  // Ajuste para o tamanho do modelo
+            .expandDims(0)
+            .toFloat()
+            .div(tf.scalar(255));  // Normaliza entre 0 e 1
 
         // Fazer a previsão
         const logits = model.predict(imageTensor);
@@ -51,10 +52,14 @@ async function preverImagem(model, imagePath) {
         // Definir os nomes das classes (ajuste conforme necessário)
         const classNames = ['html', 'javaunittest', 'json', 'other', 'sql', 'svg', 'xml'];
 
-        console.log(`📌 Imagem: ${path.basename(imagePath)}`);
-        console.log(`🧐 Classe prevista: ${classNames[predictedClassIndex]} (Índice: ${predictedClassIndex})`);
-        console.log(`🔢 Confiança: ${confidence.toFixed(2)}%\n`);
-    } catch (error) {
+        let classe = classNames[predictedClassIndex]
+        if (classe != CLASS) {
+            console.log(`📌 Imagem: ${path.basename(imagePath)}`);
+            console.log(`🧐 Classe prevista: ${classe} (Índice: ${predictedClassIndex})`);
+            console.log(`🔢 Confiança: ${confidence.toFixed(2)}%\n`);
+        }
+    } catch
+        (error) {
         console.error(`❌ Erro ao processar a imagem "${imagePath}":`, error);
     }
 }
