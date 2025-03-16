@@ -86,7 +86,7 @@ model.compile(optimizer='adam',
               metrics=['accuracy'])
 
 # Treinar o modelo
-epochs = 5
+epochs = 10
 history = model.fit(train_ds, validation_data=val_ds, epochs=epochs)
 
 # Diretório onde os modelos serão salvos
@@ -94,9 +94,15 @@ MODELOS_PATH = "modelos"
 os.makedirs(MODELOS_PATH, exist_ok=True)
 
 nome_modelo = gerar_nome_modelo(DATASET_PATH)
-caminho_modelo = os.path.join(MODELOS_PATH, nome_modelo + ".keras")
-model.save(caminho_modelo)
+caminho_modelo = os.path.join(MODELOS_PATH, nome_modelo )
+model.export(caminho_modelo+"/saved_model")
 
+
+
+caminho_modelo_keras = os.path.join(MODELOS_PATH, nome_modelo + ".keras")
+model.save(caminho_modelo_keras)
+caminho_modelo_h5 = os.path.join(MODELOS_PATH, nome_modelo + ".h5")
+model.save(caminho_modelo_h5)
 
 
 # Avaliação no conjunto de teste
