@@ -5,6 +5,15 @@ import pathlib
 import numpy as np
 import shutil
 from sklearn.metrics import confusion_matrix
+import os
+import hashlib
+
+
+def gerar_nome_modelo(dataset_path):
+    hash_nome = hashlib.md5(dataset_path.encode()).hexdigest()[:8]  # Hash curto
+    nome_limpo = dataset_path.replace("/", "_").replace(" ", "_")  # Nome seguro
+    return f"{nome_limpo}_{hash_nome}"
+
 
 # Diretório das imagens
 DATASET_PATH = '/home/munif-gebara-junior/ml/learn/codeminimap/dataset/novo_encrypted'
@@ -19,7 +28,7 @@ if filtered_data_dir.exists():
 filtered_data_dir.mkdir(parents=True, exist_ok=True)
 
 # Filtrar apenas as pastas com mais de 500 arquivos
-filtered_dirs = [d for d in data_dir.iterdir() if d.is_dir() and len(list(d.glob('*'))) > 1000]
+filtered_dirs = [d for d in data_dir.iterdir() if d.is_dir() and len(list(d.glob('*'))) > 500]
 
 # Copiar imagens das pastas filtradas para o novo diretório
 for d in filtered_dirs:
@@ -79,6 +88,16 @@ model.compile(optimizer='adam',
 # Treinar o modelo
 epochs = 5
 history = model.fit(train_ds, validation_data=val_ds, epochs=epochs)
+
+# Diretório onde os modelos serão salvos
+MODELOS_PATH = "modelos"
+os.makedirs(MODELOS_PATH, exist_ok=True)
+
+nome_modelo = gerar_nome_modelo(DATASET_PATH)
+caminho_modelo = os.path.join(MODELOS_PATH, nome_modelo + ".keras")
+model.save(caminho_modelo)
+
+
 
 # Avaliação no conjunto de teste
 test_loss, test_acc = model.evaluate(val_ds, verbose=2)
