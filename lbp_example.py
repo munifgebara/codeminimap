@@ -40,7 +40,7 @@ for classSize in classSizes:
     filenames = []
 
     # baseFolder = 'dataset/all_encrypted_fixed_size/'
-    baseFolder = "/home/munif/PycharmProjects/codeminimap/datasets/all_encrypted_fixed_size/"
+    baseFolder = "/home/munif-gebara-junior/ml/learn/codeminimap/dataset/novo_encrypted/"
 
     folders = os.listdir(baseFolder)
     l = 0
@@ -67,7 +67,7 @@ for classSize in classSizes:
 
     t = 0
     for textLabel in textLabels:
-        print(t, textLabel)
+        print(t, textLabel,len(os.listdir(baseFolder + textLabel)))
         t += 1
 
 

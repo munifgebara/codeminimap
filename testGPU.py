@@ -7,11 +7,11 @@ import shutil
 from sklearn.metrics import confusion_matrix
 
 # Diretório das imagens
-DATASET_PATH = '/home/munif/PycharmProjects/codeminimap/datasets/all_encrypted_fixed_size'
+DATASET_PATH = '/home/munif-gebara-junior/ml/learn/codeminimap/dataset/novo_encrypted'
 data_dir = pathlib.Path(DATASET_PATH)
 
 # Diretório filtrado
-filtered_data_dir = pathlib.Path('/home/munif/PycharmProjects/codeminimap/datasets/filtered')
+filtered_data_dir = pathlib.Path('/home/munif-gebara-junior/ml/learn/codeminimap/dataset/novo_encrypted/filtered')
 
 # Remover a pasta filtrada se existir para evitar lixo
 if filtered_data_dir.exists():
@@ -113,3 +113,5 @@ plt.xlabel('Predicted Label')
 plt.ylabel('True Label')
 plt.title('Confusion Matrix')
 plt.show()
+
+
