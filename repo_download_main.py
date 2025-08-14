@@ -374,7 +374,8 @@ def main():
         try:
             owner, repo = dl.parse_repo(url)
             ref = guess_default_branch(dl, owner, repo, git_bin="git")
-            out_root_lang = os.path.join(DESTINO, slugify(lang))
+            out_root_lang = os.path.join(DESTINO, language_slug(
+                lang))
             os.makedirs(out_root_lang, exist_ok=True)
 
             process_one(
