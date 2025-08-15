@@ -5,12 +5,13 @@ import csv
 import json
 import hashlib
 import chardet
-from multiprocessing import Pool, Value, Lock
 import subprocess
+from multiprocessing import Pool, Value, Lock, Manager
+from typing import Optional, Tuple
 
 # ===================== Configurações =====================
-caminho_base = '/home/munif/dataset'
-caminho_saida = '/mnt/7937a629-8811-4af0-ae7a-097a78cc4d2c/datasets/99Dataset'
+caminho_base = '/home/munif/dataset2'  # raiz onde estão as pastas <Linguagem>/<owner>__<repo>__<ref>
+caminho_saida = '/mnt/7937a629-8811-4af0-ae7a-097a78cc4d2c/datasets/100Dataset'
 encrypt_flag = True
 
 if encrypt_flag:
@@ -21,7 +22,8 @@ if fixed_size:
     caminho_saida = caminho_saida + '_fixed_size'
 
 ARQUIVO_CSV = os.path.join(caminho_saida, 'catalogo.csv')
-ARQ_METADATA = 'metadata.json'  # nome esperado do arquivo de metadados na raiz do repo
+ARQ_METADATA = 'metadata.json'
+# =========================================================
 
 # Dicionário de extensões conhecidas -> tipo
 EXTENSOES = {
@@ -45,21 +47,23 @@ EXTENSOES = {
     '.twig': 'twig', '.txt': 'text', '.vue': 'vue', '.xml': 'xml', '.xsl': 'xsl',
     '.yaml': 'yaml', '.yml': 'yaml'
 }
-# =========================================================
 
-# --- Globais compartilhadas para progresso/CSV ---
+# --- Globais compartilhadas (multiprocessing) ---
 _progress_val = None
 _progress_total = None
 _progress_lock = None
 _csv_lock = None
+_repo_root_cache = None   # caminho_arquivo -> repo_root
+_author_cache = None      # (repo_root, relpath) -> autor
 
-def init_globals(progress_val, progress_total, progress_lock, csv_lock):
-    """Inicializador do Pool para compartilhar locks/contadores."""
-    global _progress_val, _progress_total, _progress_lock, _csv_lock
+def init_globals(progress_val, progress_total, progress_lock, csv_lock, repo_root_cache, author_cache):
+    global _progress_val, _progress_total, _progress_lock, _csv_lock, _repo_root_cache, _author_cache
     _progress_val = progress_val
     _progress_total = progress_total
     _progress_lock = progress_lock
     _csv_lock = csv_lock
+    _repo_root_cache = repo_root_cache
+    _author_cache = author_cache
 
 # ===================== Utilidades =====================
 
@@ -89,8 +93,7 @@ def create_16_digit_hash(input_string: str) -> str:
     truncated_hash = hash_int % (10 ** 16)
     return f"{truncated_hash:016d}"
 
-def processar_linhas(caminho_arquivo: str, encoding_detectada: str):
-    """Lê o arquivo e retorna linhas, contagem, e maior largura (com fallbacks de encoding)."""
+def processar_linhas(caminho_arquivo: str, encoding_detectada: Optional[str]):
     contador_linhas = 0
     linha_mais_larga = 0
     linhas = []
@@ -107,7 +110,7 @@ def processar_linhas(caminho_arquivo: str, encoding_detectada: str):
             return linhas, contador_linhas, linha_mais_larga
         except Exception:
             continue
-    # Último recurso: ignora erros
+    # Último recurso
     with open(caminho_arquivo, 'r', encoding='utf-8', errors='ignore') as arquivo:
         for linha in arquivo:
             s = linha.rstrip('\n\r')
@@ -118,12 +121,6 @@ def processar_linhas(caminho_arquivo: str, encoding_detectada: str):
     return linhas, contador_linhas, linha_mais_larga
 
 def is_text_file_quick(path: str, sample_size: int = 65536) -> bool:
-    """
-    Heurística rápida para decidir se é arquivo de texto:
-    - lê até 64KB
-    - se contém NUL -> binário
-    - tenta decodificar como UTF-8; se falhar, usa latin-1 e mede taxa de imprimíveis
-    """
     try:
         with open(path, 'rb') as f:
             data = f.read(sample_size)
@@ -141,14 +138,11 @@ def is_text_file_quick(path: str, sample_size: int = 65536) -> bool:
         return False
 
 def listar_arquivos_classificar(base_dir: str):
-    """Retorna:
-       - lista [(caminho_absoluto, tipo)] apenas para extensões conhecidas
-       - set de extensões de arquivos de texto desconhecidas
-    """
     conhecidos = []
     desconhecidas_texto = set()
     for root, dirs, files in os.walk(base_dir):
-        if '.git' in root:
+        # ignora controles de git
+        if os.path.basename(root) in ('.git',):
             continue
         for nome in files:
             caminho = os.path.join(root, nome)
@@ -171,153 +165,125 @@ def escrever_extensoes_desconhecidas(colecao_exts, destino_dir: str):
     except Exception as e:
         print("Falha ao salvar extensões desconhecidas:", e, file=sys.stderr)
 
-def decompor_caminho_para_csv(caminho_arquivo: str):
-    """
-    Retorna (projeto_original, caminho_dentro_do_projeto, nome_arquivo_original).
-    'projeto_original' é o primeiro diretório após caminho_base.
-    """
-    rel = os.path.relpath(caminho_arquivo, start=caminho_base)
-    partes = rel.split(os.sep)
-    if len(partes) == 1:
-        projeto = '(raiz)'
-        nome = partes[0]
-        caminho_dentro = ''
-    else:
-        projeto = partes[0]
-        nome = partes[-1]
-        caminho_dentro = os.path.join(*partes[1:-1]) if len(partes) > 2 else ''
-    return projeto, caminho_dentro, nome
+def find_repo_root(path_file: str) -> Optional[str]:
+    """Sobe a partir do arquivo até encontrar um diretório contendo '.git'."""
+    # cache
+    cached = _repo_root_cache.get(path_file) if _repo_root_cache is not None else None
+    if cached:
+        return cached
 
-# -------- Autor via metadata.json --------
-
-def _deep_find_authorish(obj):
-    """
-    Procura, de forma tolerante, algo que pareça 'autor/owner' dentro do JSON.
-    Cobre padrões comuns:
-      - 'owner', 'author', 'user', 'organization'
-      - dicionários com chaves 'login', 'name', 'username'
-      - estruturas aninhadas como repository.owner.login
-    Retorna string ou None.
-    """
-    CAND_KEYS = {'owner', 'author', 'user', 'organization', 'repo_owner', 'maintainer'}
-    USER_KEYS = ('login', 'name', 'username', 'user', 'owner', 'display_name')
-
-    def extract_from_owner_dict(d):
-        # tenta várias chaves plausíveis
-        for k in USER_KEYS:
-            v = d.get(k)
-            if isinstance(v, str) and v.strip():
-                return v.strip()
-        # como fallback, primeira string do dict
-        for v in d.values():
-            if isinstance(v, str) and v.strip():
-                return v.strip()
-        return None
-
-    # 1) tentativas diretas em dict de topo
-    if isinstance(obj, dict):
-        # caso clássico: repository → owner
-        repo = obj.get('repository')
-        if isinstance(repo, dict):
-            own = repo.get('owner')
-            if isinstance(own, dict):
-                cand = extract_from_owner_dict(own)
-                if cand:
-                    return cand
-            if isinstance(own, str) and own.strip():
-                return own.strip()
-
-        # checa chaves candidatas no topo
-        for k in CAND_KEYS:
-            if k in obj:
-                v = obj[k]
-                if isinstance(v, dict):
-                    cand = extract_from_owner_dict(v)
-                    if cand:
-                        return cand
-                elif isinstance(v, str) and v.strip():
-                    return v.strip()
-
-        # alguns dumps trazem 'owner' em lista (ex.: múltiplos mantenedores)
-        for k in CAND_KEYS:
-            v = obj.get(k)
-            if isinstance(v, list) and v:
-                # pega o primeiro que for string/dict aproveitável
-                for item in v:
-                    if isinstance(item, str) and item.strip():
-                        return item.strip()
-                    if isinstance(item, dict):
-                        cand = extract_from_owner_dict(item)
-                        if cand:
-                            return cand
-
-        # fallback: varre recursivamente
-        for v in obj.values():
-            res = _deep_find_authorish(v)
-            if res:
-                return res
-
-    elif isinstance(obj, list):
-        for it in obj:
-            res = _deep_find_authorish(it)
-            if res:
-                return res
-
+    base_abs = os.path.abspath(caminho_base)
+    cur = os.path.abspath(os.path.dirname(path_file))
+    while True:
+        if os.path.isdir(os.path.join(cur, '.git')):
+            if _repo_root_cache is not None:
+                _repo_root_cache[path_file] = cur
+            return cur
+        parent = os.path.dirname(cur)
+        if parent == cur or os.path.commonpath([parent, base_abs]) != base_abs:
+            break
+        cur = parent
     return None
 
-def obter_autor_via_metadata(repo_dir: str) -> str | None:
-    """Tenta abrir <repo_dir>/metadata.json e extrair um nome de autor/owner de forma tolerante."""
-    meta_path = os.path.join(repo_dir, ARQ_METADATA)
+def load_author_from_metadata(repo_root: str) -> Optional[str]:
+    """Tenta extrair owner/autor de <repo_root>/metadata.json."""
+    meta_path = os.path.join(repo_root, ARQ_METADATA)
     if not os.path.isfile(meta_path):
         return None
     try:
         with open(meta_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
-        autor = _deep_find_authorish(data)
-        if autor and isinstance(autor, str):
-            return autor.strip()
+        # tentativas comuns
+        repo = data.get('repository') or data.get('repo') or {}
+        own = repo.get('owner') or data.get('owner') or {}
+        # owner pode ser string ou dict
+        if isinstance(own, str) and own.strip():
+            return own.strip()
+        if isinstance(own, dict):
+            for k in ('login', 'name', 'username', 'user', 'owner', 'display_name'):
+                v = own.get(k)
+                if isinstance(v, str) and v.strip():
+                    return v.strip()
+        # full_name: owner/repo
+        full = (repo if isinstance(repo, dict) else {}).get('full_name') or data.get('full_name')
+        if isinstance(full, str) and '/' in full:
+            return full.split('/', 1)[0].strip()
     except Exception:
         return None
     return None
 
-def obter_autor_projeto(caminho_arquivo: str) -> str:
-    """
-    Autor:
-      1) Se houver .git no diretório do projeto → último autor do arquivo (git log).
-      2) Caso contrário → lê <repo>/metadata.json e tenta extrair owner/autor.
-      3) Caso não encontre → '(desconhecido)'.
-    """
-    projeto, _, _ = decompor_caminho_para_csv(caminho_arquivo)
-    if projeto == '(raiz)':
-        return '(desconhecido)'
+def obter_autor_git(path_file: str) -> Optional[str]:
+    """Retorna autor via git log (último commit que tocou o arquivo) ou None."""
+    repo_root = find_repo_root(path_file)
+    if not repo_root:
+        return None
+    rel = os.path.relpath(path_file, repo_root)
+    try:
+        out = subprocess.check_output(
+            ['git', '-C', repo_root, 'log', '--format=%an', '-n', '1', '--', rel],
+            stderr=subprocess.DEVNULL
+        ).decode('utf-8', errors='ignore').strip()
+        return out or None
+    except Exception:
+        return None
 
-    repo_dir = os.path.join(caminho_base, projeto)
-    git_dir = os.path.join(repo_dir, '.git')
+def obter_autor_projeto(path_file: str) -> str:
+    """Autor por ordem: git -> metadata.json -> '(desconhecido)' (com cache por arquivo)."""
+    key = None
+    repo_root = find_repo_root(path_file)
+    if repo_root:
+        rel = os.path.relpath(path_file, repo_root)
+        key = (repo_root, rel)
 
-    # 1) Tenta pelo git
-    if os.path.isdir(git_dir):
-        try:
-            autor = subprocess.check_output(
-                ['git', '-C', repo_dir, 'log', '--format=%an', '-n', '1', '--', caminho_arquivo],
-                stderr=subprocess.DEVNULL
-            ).decode('utf-8', errors='ignore').strip()
-            if autor:
-                return autor
-        except Exception:
-            pass
+    if key and _author_cache is not None:
+        cached = _author_cache.get(str(key))
+        if isinstance(cached, str) and cached:
+            return cached
 
-    # 2) metadata.json
-    autor_meta = obter_autor_via_metadata(repo_dir)
-    if autor_meta:
-        return autor_meta
+    # 1) Git
+    autor = obter_autor_git(path_file)
+    if autor:
+        if key and _author_cache is not None:
+            _author_cache[str(key)] = autor
+        return autor
 
-    # 3) Fallback
+    # 2) metadata.json na raiz do repo
+    if repo_root:
+        autor_meta = load_author_from_metadata(repo_root)
+        if autor_meta:
+            if key and _author_cache is not None:
+                _author_cache[str(key)] = autor_meta
+            return autor_meta
+
+    # 3) fallback
+    if key and _author_cache is not None:
+        _author_cache[str(key)] = '(desconhecido)'
     return '(desconhecido)'
 
-# -------- CSV / progresso --------
+def decompor_para_csv(caminho_arquivo: str) -> Tuple[str, str, str]:
+    """
+    Retorna (projeto_original, caminho_dentro_do_projeto, nome_arquivo_original)
+    Onde 'projeto_original' é a pasta do repo (ex.: owner__repo__ref).
+    """
+    rel_to_base = os.path.relpath(caminho_arquivo, start=caminho_base)
+    partes = rel_to_base.split(os.sep)
+    # Estrutura esperada: <LinguagemSlug>/<owner>__<repo>__<ref>/...
+    if len(partes) >= 2:
+        projeto = partes[1]
+        nome = partes[-1]
+        # caminho dentro do projeto = tudo após <LinguagemSlug>/<owner>__<repo>__<ref> sem o nome
+        if len(partes) > 2:
+            caminho_dentro = os.path.join(*partes[2:-1]) if len(partes) > 3 else ''
+        else:
+            caminho_dentro = ''
+        return projeto, caminho_dentro, nome
+    # fallback genérico
+    projeto = '(desconhecido)'
+    nome = partes[-1] if partes else os.path.basename(caminho_arquivo)
+    caminho_dentro = ''
+    return projeto, caminho_dentro, nome
 
 def append_csv_row(novo_nome: str, tipo: str, projeto: str, caminho_dentro: str, nome_original: str, autor: str):
-    """Acrescenta linha no CSV de forma thread-safe e cria header se necessário."""
     with _csv_lock:
         os.makedirs(os.path.dirname(ARQUIVO_CSV), exist_ok=True)
         write_header = not os.path.exists(ARQUIVO_CSV) or os.path.getsize(ARQUIVO_CSV) == 0
@@ -336,7 +302,6 @@ def atualizar_progresso():
         print(f"[{_progress_val.value} de {_progress_total.value}] processado", flush=True)
 
 def get_unique_filename(dest_dir: str, base_name_no_ext: str, ext: str = '.png') -> str:
-    """Gera um nome de arquivo único no diretório de destino, serializando a checagem via lock."""
     with _csv_lock:
         candidate = f"{base_name_no_ext}{ext}"
         n = 1
@@ -349,7 +314,7 @@ def get_unique_filename(dest_dir: str, base_name_no_ext: str, ext: str = '.png')
 
 def gera_imagem_e_csv(caminho_arquivo: str, tipo_destino: str):
     try:
-        # Detecta encoding uma vez
+        # Detecta encoding
         with open(caminho_arquivo, 'rb') as f:
             raw = f.read()
             result = chardet.detect(raw)
@@ -357,7 +322,7 @@ def gera_imagem_e_csv(caminho_arquivo: str, tipo_destino: str):
 
         linhas, contador_linhas, linha_mais_larga = processar_linhas(caminho_arquivo, encoding)
 
-        # Define dimensões da imagem
+        # Dimensões
         if fixed_size:
             largura, altura = 128, 128
         else:
@@ -384,16 +349,15 @@ def gera_imagem_e_csv(caminho_arquivo: str, tipo_destino: str):
             if (y + 2 * border) >= altura:
                 break
 
-        # Pastas e nome único
+        # Pasta destino por tipo e nome único
         caminho_tipo = os.path.join(caminho_saida, tipo_destino)
         os.makedirs(caminho_tipo, exist_ok=True)
         base_hash = create_16_digit_hash(caminho_arquivo)
         novo_nome = get_unique_filename(caminho_tipo, base_hash, '.png')
-        caminho_final = os.path.join(caminho_tipo, novo_nome)
-        imagem.save(caminho_final)
+        imagem.save(os.path.join(caminho_tipo, novo_nome))
 
         # Metadados -> CSV
-        projeto, caminho_dentro, nome_original = decompor_caminho_para_csv(caminho_arquivo)
+        projeto, caminho_dentro, nome_original = decompor_para_csv(caminho_arquivo)
         autor = obter_autor_projeto(caminho_arquivo)
         append_csv_row(novo_nome, tipo_destino, projeto, caminho_dentro, nome_original, autor)
 
@@ -408,19 +372,18 @@ def processar_arquivo(args):
 # ===================== Main =====================
 
 def main():
-    # 1) Classificar arquivos
+    # 1) Seleção de arquivos
     conhecidos, desconhecidas_texto = listar_arquivos_classificar(caminho_base)
-
     total = len(conhecidos)
     print(f"Arquivos a processar (extensões conhecidas): {total}")
 
-    # 2) Salvar extensões desconhecidas que parecem texto
+    # 2) Escreve extensões desconhecidas
     escrever_extensoes_desconhecidas(desconhecidas_texto, caminho_saida)
 
     if total == 0:
         return
 
-    # 3) Inicializa CSV com header (uma vez)
+    # 3) Inicializa CSV se vazio
     os.makedirs(caminho_saida, exist_ok=True)
     if not os.path.exists(ARQUIVO_CSV) or os.path.getsize(ARQUIVO_CSV) == 0:
         with open(ARQUIVO_CSV, 'w', encoding='utf-8', newline='') as f:
@@ -430,16 +393,19 @@ def main():
                 'caminho dentro do projeto', 'nome do arquivo original', 'autor'
             ])
 
-    # 4) Pool com progresso e lock de CSV
+    # 4) Pool com locks e caches
+    manager = Manager()
     progress_val = Value('i', 0)
     progress_total = Value('i', total)
     progress_lock = Lock()
     csv_lock = Lock()
+    repo_root_cache = manager.dict()
+    author_cache = manager.dict()
 
     with Pool(
         processes=os.cpu_count() or 4,
         initializer=init_globals,
-        initargs=(progress_val, progress_total, progress_lock, csv_lock)
+        initargs=(progress_val, progress_total, progress_lock, csv_lock, repo_root_cache, author_cache)
     ) as pool:
         pool.map(processar_arquivo, conhecidos)
 
